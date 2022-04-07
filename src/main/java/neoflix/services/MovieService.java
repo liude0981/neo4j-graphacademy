@@ -56,8 +56,7 @@ public class MovieService {
                     MATCH (m:Movie)
                     WHERE m.`%s` IS NOT NULL
                     RETURN m {
-                      .*,
-                      favorite: false
+                      .*
                     } AS movie
                     ORDER BY m.`%s` %s
                     SKIP $skip
