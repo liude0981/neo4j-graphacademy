@@ -1,6 +1,5 @@
 package neoflix.services;
 
-import neoflix.AppUtils;
 import neoflix.Params;
 import neoflix.ValidationException;
 
@@ -14,8 +13,6 @@ import java.util.Map;
 
 public class RatingService {
     private final Driver driver;
-    private final List<Map<String, Object>> ratings;
-    private final Map<String, Object> pulpfiction;
 
     /**
      * The constructor expects an instance of the Neo4j Driver, which will be
@@ -23,8 +20,6 @@ public class RatingService {
      */
     public RatingService(Driver driver) {
         this.driver = driver;
-        this.ratings = AppUtils.loadFixtureList("ratings");
-        this.pulpfiction = AppUtils.loadFixtureSingle("pulpfiction");
     }
 
     /**
