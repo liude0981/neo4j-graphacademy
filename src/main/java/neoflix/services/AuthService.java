@@ -2,7 +2,11 @@ package neoflix.services;
 
 import neoflix.AppUtils;
 import neoflix.AuthUtils;
+import neoflix.ValidationException;
+
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.Values;
+import org.neo4j.driver.exceptions.*;
 
 import java.util.List;
 import java.util.Map;
@@ -68,9 +72,9 @@ public class AuthService {
             String sub = (String)user.get("userId");
             String token = AuthUtils.sign(sub,userToClaims(user), jwtSecret);
 
-            // tag::return[]
+            // tag::return-register[]
             return userWithToken(user, token);
-            // end::return[]
+            // end::return-register[]
         // tag::catch[]
         } catch (ClientException e) {
             // Handle unique constraints in the database
