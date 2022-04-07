@@ -49,9 +49,6 @@ public class MovieService {
             // tag::allcypher[]
             // Execute a query in a new Read Transaction
             var movies = session.readTransaction(tx -> {
-                // Get an array of IDs for the User's favorite movies
-                var favorites =  getUserFavorites(tx, userId);
-
                 // Retrieve a list of movies with the
                 // favorite flag appened to the movie's properties
                 Params.Sort sort = params.sort(Params.Sort.title);
@@ -60,13 +57,13 @@ public class MovieService {
                     WHERE m.`%s` IS NOT NULL
                     RETURN m {
                       .*,
-                      favorite: m.tmdbId IN $favorites
+                      favorite: false
                     } AS movie
                     ORDER BY m.`%s` %s
                     SKIP $skip
                     LIMIT $limit
                     """, sort, sort, params.order());
-                var res= tx.run(query, Values.parameters( "skip", params.skip(), "limit", params.limit(), "favorites",favorites));
+                var res= tx.run(query, Values.parameters( "skip", params.skip(), "limit", params.limit()));
                 // tag::allmovies[]
                 // Get a list of Movies from the Result
                 return res.list(row -> row.get("movie").asMap());
