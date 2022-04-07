@@ -1,6 +1,5 @@
 package neoflix.services;
 
-import neoflix.AppUtils;
 import neoflix.AuthUtils;
 import neoflix.ValidationException;
 
@@ -17,7 +16,6 @@ public class AuthService {
 
 
     private final Driver driver;
-    private final List<Map<String, Object>> users;
     private String jwtSecret;
 
     /**
@@ -30,7 +28,6 @@ public class AuthService {
     public AuthService(Driver driver, String jwtSecret) {
         this.driver = driver;
         this.jwtSecret = jwtSecret;
-        this.users = AppUtils.loadFixtureList("users");
     }
 
     /**
