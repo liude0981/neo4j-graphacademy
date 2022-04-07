@@ -45,23 +45,41 @@ public class AuthService {
     // tag::register[]
     public Map<String,Object> register(String email, String plainPassword, String name) {
         var encrypted = AuthUtils.encryptPassword(plainPassword);
-        // tag::constraintError[]
-        // TODO: Handle Unique constraints in the database
-        var foundUser = users.stream().filter(u -> u.get("email").equals(email)).findAny();
-        if (foundUser.isPresent()) {
-            throw new RuntimeException("An account already exists with the email address");
+        // Open a new Session
+        try (var session = this.driver.session()) {
+            // tag::create[]
+            var user = session.writeTransaction(tx -> {
+                String statement = """
+                              CREATE (u:User {
+                                  userId: randomUuid(),
+                                  email: $email,
+                                  password: $encrypted,
+                                  name: $name
+                            })
+                            RETURN u { .userId, .name, .email } as u""";
+                var res = tx.run(statement, Values.parameters("email", email, "encrypted", encrypted, "name", name));
+                // end::create[]
+                // tag::extract[]
+                // Extract safe properties from the user node (`u`) in the first row
+                return res.single().get("u").asMap();
+                // end::extract[]
+
+            });
+            String sub = (String)user.get("userId");
+            String token = AuthUtils.sign(sub,userToClaims(user), jwtSecret);
+
+            // tag::return[]
+            return userWithToken(user, token);
+            // end::return[]
+        // tag::catch[]
+        } catch (ClientException e) {
+            // Handle unique constraints in the database
+            if (e.code().equals("Neo.ClientError.Schema.ConstraintValidationFailed")) {
+                throw new ValidationException("An account already exists with the email address", Map.of("email","Email address already taken"));
+            }
+            throw e;
         }
-        // end::constraintError[]
-
-        // TODO: Save user in database
-        var user = Map.<String,Object>of("email",email, "name",name,
-                "userId", String.valueOf(email.hashCode()), "password", encrypted);
-        users.add(user);
-
-        String sub = (String) user.get("userId");
-        String token = AuthUtils.sign(sub,userToClaims(user), jwtSecret);
-
-        return userWithToken(user, token);
+        // end::catch[]
     }
     // end::register[]
 
