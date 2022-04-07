@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class _05_AuthenticationTest {
     private static Driver driver;
     private static String jwtSecret;
+    private static AuthService authService;
 
     private static final String email = "authenticated@neo4j.com";
     private static final String password = "AuthenticateM3!";
@@ -26,6 +27,9 @@ class _05_AuthenticationTest {
         jwtSecret = AppUtils.getJwtSecret();
 
         if (driver != null) driver.session().writeTransaction(tx -> tx.run("MATCH (u:User {email: $email}) DETACH DELETE u", Values.parameters("email", email)));
+
+        authService = new AuthService(driver, jwtSecret);
+        authService.register(email, password, name);
     }
 
     @AfterAll
@@ -35,9 +39,6 @@ class _05_AuthenticationTest {
 
     @Test
     void authenticateUser() {
-        AuthService authService = new AuthService(driver, jwtSecret);
-        authService.register(email, password, name);
-
         var output = authService.authenticate(email, password);
         assertEquals(email, output.get("email"), "email property");
         assertEquals(name, output.get("name"), "name property");
@@ -50,25 +51,21 @@ class _05_AuthenticationTest {
 
     @Test
     void tryAuthWithIncorrectPassword() {
-        AuthService authService = new AuthService(driver, jwtSecret);
-
         try {
             authService.authenticate(email, "unknown");
             fail("incorrect password auth should fail");
-        } catch (Exception e) {
-            assertEquals("Cannot retrieve a single record, because this result is empty.", e.getMessage());
+        } catch (ValidationException e) {
+            assertEquals("Incorrect password", e.getMessage());
         }
     }
 
     @Test
-    void tryAuthWithIncorrectUsername() {
-        AuthService authService = new AuthService(driver, jwtSecret);
-
+    void tryAuthWithIncorrectEmail() {
         try {
             authService.authenticate("unknown", "unknown");
-            fail("Auth with unknown username should fail");
-        } catch (Exception e) {
-            assertEquals("Cannot retrieve a single record, because this result is empty.", e.getMessage());
+            fail("Auth with unknown email should fail");
+        } catch (ValidationException e) {
+            assertEquals("Incorrect email", e.getMessage());
         }
     }
 

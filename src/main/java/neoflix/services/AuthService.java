@@ -109,20 +109,35 @@ public class AuthService {
      */
     // tag::authenticate[]
     public Map<String,Object> authenticate(String email, String plainPassword) {
-        // TODO: Authenticate the user from the database
-        var foundUser = users.stream().filter(u -> u.get("email").equals(email)).findAny();
-        if (foundUser.isEmpty())
-            throw new RuntimeException("Cannot retrieve a single record, because this result is empty.");
-        var user = foundUser.get();
-        if (!plainPassword.equals(user.get("password")) && 
-            !AuthUtils.verifyPassword(plainPassword,(String)user.get("password"))) { // 
-            throw new RuntimeException("Incorrect password");
+        // Open a new Session
+        try (var session = this.driver.session()) {
+            // tag::query[]
+            // Find the User node within a Read Transaction
+            var user = session.readTransaction(tx -> {
+                String statement = "MATCH (u:User {email: $email}) RETURN u";
+                var res = tx.run(statement, Values.parameters("email", email));
+                return res.single().get("u").asMap();
+
+            });
+            // end::query[]
+
+            // tag::password[]
+            // Check password
+            if (!AuthUtils.verifyPassword(plainPassword, (String)user.get("password"))) {
+                throw new ValidationException("Incorrect password", Map.of("password","Incorrect password"));
+            }
+            // end::password[]
+
+            // tag::auth-return[]
+            String sub = (String)user.get("userId");
+            String token = AuthUtils.sign(sub, userToClaims(user), jwtSecret);
+            return userWithToken(user, token);
+            // end::auth-return[]
+        // tag::auth-catch[]
+        } catch(NoSuchRecordException e) {
+            throw new ValidationException("Incorrect email", Map.of("email","Incorrect email"));
         }
-        // tag::return[]
-        String sub = (String) user.get("userId");
-        String token = AuthUtils.sign(sub, userToClaims(user), jwtSecret);
-        return userWithToken(user, token);
-        // end::return[]
+        // end::auth-catch[]
     }
     // end::authenticate[]
 
