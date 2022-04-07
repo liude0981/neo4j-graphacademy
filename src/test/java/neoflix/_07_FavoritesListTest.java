@@ -11,12 +11,13 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.Values;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 class _07_FavoritesListTest {
     private static Driver driver;
 
-    private static final String toyStory = "862";
     private static final String goodfellas = "769";
+    private static final String toyStory = "862";
     private static final String userId = "9f965bf6-7e32-4afb-893f-756f502b2c2a";
     private static final String email = "graphacademy.favorite@neo4j.com";
 
@@ -46,7 +47,7 @@ class _07_FavoritesListTest {
             favoriteService.add("unknown", "x999");
             fail("Adding favorite with unknown userId or movieId should fail");
         } catch (Exception e) {
-            assertEquals("Couldn't create a favorite relationship for User unknown and Movie x999", e.getMessage());
+            assertEquals("Could not create favorite movie for user", e.getMessage());
         }
     }
 
@@ -55,8 +56,8 @@ class _07_FavoritesListTest {
         if (driver != null)
             try (var session = driver.session()) {
             session.writeTransaction(tx ->
-                    tx.run("MATCH (u:User {userId: $userId})-[r:HAS_FAVORITE]->(m:Movie) DELETE r",
-                            Values.parameters("userId", userId)));
+                    tx.run("MATCH (u:User {userId: $userId})-[r:HAS_FAVORITE]->(m:Movie {tmdbId:$movieId}) DELETE r",
+                            Values.parameters("userId", userId,"movieId", goodfellas)));
             }
     }
 
@@ -74,6 +75,23 @@ class _07_FavoritesListTest {
 
         var movieFavorite = favorites.stream().anyMatch(movie -> movie.get("tmdbId").equals(goodfellas));
         assertTrue(movieFavorite, "goodfellas is a favorite movie");
+    }
+
+    @Test
+    void saveToyStoryToUserFavorites() {
+        assumeTrue(driver != null);
+        FavoriteService favoriteService = new FavoriteService(driver);
+
+        var output = favoriteService.add(userId, toyStory);
+
+        assertNotNull(output);
+        assertEquals(toyStory, output.get("tmdbId"));
+        assertTrue((Boolean)output.get("favorite"), "toy story is favorite");
+
+        var favorites = favoriteService.all(userId, new Params(null, Params.Sort.title, Params.Order.DESC, 10, 0));
+
+        var movieFavorite = favorites.stream().anyMatch(movie -> movie.get("tmdbId").equals(toyStory));
+        assertTrue(movieFavorite, "toy story is a favorite movie");
     }
 
     @Test

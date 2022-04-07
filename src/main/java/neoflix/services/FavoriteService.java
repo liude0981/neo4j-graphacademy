@@ -7,17 +7,11 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.NoSuchRecordException;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class FavoriteService {
     private final Driver driver;
-
-    private final List<Map<String,Object>> popular;
-    private final List<Map<String,Object>> users;
-    private final Map<String,List<Map<String,Object>>> userFavorites = new HashMap<>();
 
     /**
      * The constructor expects an instance of the Neo4j Driver, which will be
@@ -27,8 +21,6 @@ public class FavoriteService {
      */
     public FavoriteService(Driver driver) {
         this.driver = driver;
-        this.popular = AppUtils.loadFixtureList("popular");
-        this.users = AppUtils.loadFixtureList("users");
     }
 
     /**
