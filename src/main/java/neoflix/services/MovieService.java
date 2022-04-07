@@ -30,7 +30,7 @@ public class MovieService {
         this.comedyMovies = AppUtils.loadFixtureList("comedy_movies");
     }
 
-    /**
+/**
      * This method should return a paginated list of movies ordered by the `sort`
      * parameter and limited to the number passed as `limit`.  The `skip` variable should be
      * used to skip a certain number of rows.
@@ -44,12 +44,40 @@ public class MovieService {
      */
     // tag::all[]
     public List<Map<String,Object>> all(Params params, String userId) {
-        // TODO: Open an Session
-        // TODO: Execute a query in a new Read Transaction
-        // TODO: Get a list of Movies from the Result
-        // TODO: Close the session
+        // Open a new session
+        try (var session = this.driver.session()) {
+            // tag::allcypher[]
+            // Execute a query in a new Read Transaction
+            var movies = session.readTransaction(tx -> {
+                // Get an array of IDs for the User's favorite movies
+                var favorites =  getUserFavorites(tx, userId);
 
-        return AppUtils.process(popular, params);
+                // Retrieve a list of movies with the
+                // favorite flag appened to the movie's properties
+                Params.Sort sort = params.sort(Params.Sort.title);
+                String query = String.format("""
+                    MATCH (m:Movie)
+                    WHERE m.`%s` IS NOT NULL
+                    RETURN m {
+                      .*,
+                      favorite: m.tmdbId IN $favorites
+                    } AS movie
+                    ORDER BY m.`%s` %s
+                    SKIP $skip
+                    LIMIT $limit
+                    """, sort, sort, params.order());
+                var res= tx.run(query, Values.parameters( "skip", params.skip(), "limit", params.limit(), "favorites",favorites));
+                // tag::allmovies[]
+                // Get a list of Movies from the Result
+                return res.list(row -> row.get("movie").asMap());
+                // end::allmovies[]
+            });
+            // end::allcypher[]
+
+            // tag::return[]
+            return movies;
+            // end::return[]
+        }
     }
     // end::all[]
 
