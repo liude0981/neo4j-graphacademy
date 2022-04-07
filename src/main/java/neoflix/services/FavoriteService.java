@@ -46,11 +46,26 @@ public class FavoriteService {
      */
     // tag::all[]
     public List<Map<String, Object>> all(String userId, Params params) {
-        // TODO: Open a new session
-        // TODO: Retrieve a list of movies favorited by the user
-        // TODO: Close session
+        // Open a new session
+        try (var session = this.driver.session()) {
 
-        return AppUtils.process(userFavorites.get(userId),params);
+            // Retrieve a list of movies favorited by the user
+            var favorites = session.readTransaction(tx -> {
+                String query = String.format("""
+                            MATCH (u:User {userId: $userId})-[r:HAS_FAVORITE]->(m:Movie)
+                            RETURN m {
+                            .*,
+                                favorite: true
+                            } AS movie
+                            ORDER BY m.`%s` %s
+                            SKIP $skip
+                            LIMIT $limit
+                        """, params.sort(Params.Sort.title), params.order());
+                var res = tx.run(query, Values.parameters("userId", userId, "skip", params.skip(), "limit", params.limit()));
+                return res.list(row -> row.get("movie").asMap());
+            });
+            return favorites;
+        }
     }
     // end::all[]
 
