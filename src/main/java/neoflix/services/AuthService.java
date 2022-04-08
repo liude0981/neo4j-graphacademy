@@ -2,7 +2,6 @@ package neoflix.services;
 
 import neoflix.AuthUtils;
 import neoflix.ValidationException;
-
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.*;
